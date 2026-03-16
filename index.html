@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air France - Vérification de Vol</title>
+    <!-- Favicon mis à jour -->
+    <link rel="icon" type="image/png" href="https://seeklogo.com/images/A/air-france-logo-png_seeklogo-464865.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --af-blue: #002395;
+            --af-red: #ED2939;
+            --af-white: #FFFFFF;
+        }
+        
+        body {
+            background-color: #f4f7f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .bg-af-blue { background-color: var(--af-blue); }
+        .text-af-blue { color: var(--af-blue); }
+        .border-af-blue { border-color: var(--af-blue); }
+        
+        .bg-af-red { background-color: var(--af-red); }
+        .text-af-red { color: var(--af-red); }
+        
+        .btn-primary {
+            background-color: var(--af-red);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: #c41e2a;
+            transform: translateY(-1px);
+        }
+
+        .card {
+            background: white;
+            border-top: 4px solid var(--af-blue);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+
+        .loader-ring {
+            display: inline-block;
+            width: 80px;
+            height: 80px;
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid var(--af-blue);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hidden-el { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Header / Navbar -->
+    <nav class="bg-af-blue p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="bg-white p-1 rounded">
+                    <span class="text-af-blue font-bold text-xl tracking-tighter">AIR<span class="text-af-red">FRANCE</span></span>
+                </div>
+            </div>
+            <div class="hidden md:flex space-x-6 text-white text-sm font-medium">
+                <a href="#" class="hover:underline">Acheter un billet</a>
+                <a href="#" class="hover:underline">Enregistrement</a>
+                <a href="#" class="hover:underline font-bold border-b-2 border-af-red">Mes réservations</a>
+                <a href="#" class="hover:underline">Information vols</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="bg-af-blue text-white py-12 px-4 border-t border-blue-900">
+        <div class="container mx-auto text-center">
+            <h1 class="text-3xl md:text-4xl font-light mb-2">Vérifiez le statut de votre réservation</h1>
+            <p class="text-blue-100 opacity-80">Consultez les détails de votre voyage en temps réel</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 -mt-8 pb-20">
+        
+        <!-- Search Card -->
+        <div id="search-card" class="card max-w-2xl mx-auto rounded-lg p-6 md:p-10 mb-8">
+            <div class="space-y-6">
+                <div>
+                    <label for="flight-number" class="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                        Numéro de réservation ou de vol
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                            <i class="fa-solid fa-plane-up"></i>
+                        </span>
+                        <input type="text" id="flight-number" placeholder="Saisissez votre numéro ici" 
+                            class="block w-full pl-10 pr-3 py-4 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-af-blue focus:border-af-blue sm:text-lg">
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500 italic">Veuillez entrer le code figurant sur votre confirmation de réservation.</p>
+                </div>
+                
+                <button onclick="startSearch()" class="btn-primary w-full py-4 rounded-md text-white font-bold text-lg shadow-lg flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>RECHERCHER MON VOL</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="hidden-el text-center py-20 fade-in">
+            <div class="loader-ring mb-4"></div>
+            <h2 class="text-2xl font-semibold text-af-blue">Recherche en cours...</h2>
+            <p class="text-gray-600 mt-2">Nous interrogeons nos serveurs pour récupérer vos données de vol.</p>
+            <div class="max-w-xs mx-auto mt-6 bg-gray-200 rounded-full h-2">
+                <div id="progress-bar" class="bg-af-red h-2 rounded-full transition-all duration-100" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Result Details -->
+        <div id="result-details" class="hidden-el max-w-3xl mx-auto space-y-6 fade-in">
+            
+            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fa-solid fa-circle-check text-green-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-green-800 font-bold">
+                            Vol confirmé - Dossier à jour
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card rounded-lg overflow-hidden shadow-2xl">
+                <!-- Header of Result -->
+                <div class="bg-af-blue text-white p-6 flex justify-between items-center">
+                    <div>
+                        <p class="text-xs opacity-75 uppercase tracking-widest">Statut du voyage</p>
+                        <h3 class="text-2xl font-bold">CONFIRMÉ</h3>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs opacity-75 uppercase tracking-widest">Référence</p>
+                        <p class="font-mono">0123 4567 8901</p>
+                    </div>
+                </div>
+
+                <!-- Body of Result -->
+                <div class="p-6 md:p-8 space-y-8">
+                    <div class="border-b pb-4">
+                        <p class="text-sm text-gray-500 mb-1">Objet : Confirmation de votre réservation Air France – Référence : 0123 4567 8901</p>
+                        <h4 class="text-af-blue font-bold text-lg mb-2">Bonjour Maria Jounier,</h4>
+                        <p class="text-gray-600 leading-relaxed">
+                            Nous avons le plaisir de vous confirmer la réservation de votre prochain voyage. Vous trouverez ci-dessous le récapitulatif de votre itinéraire :
+                        </p>
+                    </div>
+
+                    <!-- Flight Itinerary -->
+                    <div class="bg-gray-50 rounded-xl p-6 border border-gray-100">
+                        <div class="flex items-center mb-6">
+                            <i class="fa-solid fa-plane-departure text-af-red mr-3 text-xl"></i>
+                            <h5 class="text-af-blue font-bold uppercase tracking-wider">Détails du vol</h5>
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-8 relative">
+                            <!-- Timeline desktop -->
+                            <div class="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-dashed border-l border-dashed border-gray-300 transform -translate-x-1/2"></div>
+
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-gray-400 uppercase">Départ</span>
+                                <span class="text-xl font-bold text-af-blue">MONTPELLIER (LFMT)</span>
+                                <span class="text-gray-600 mt-1">16/02/2026 à <span class="font-bold">17h</span></span>
+                            </div>
+
+                            <div class="flex flex-col md:text-right">
+                                <span class="text-xs font-bold text-gray-400 uppercase">Arrivée</span>
+                                <span class="text-xl font-bold text-af-blue">Stuttgart (EDDS)</span>
+                                <span class="text-gray-600 mt-1">16/02/2026 à <span class="font-bold">18h30</span></span>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 pt-6 border-t border-gray-200 flex justify-between items-center">
+                            <div class="flex flex-col">
+                                <span class="text-xs text-gray-400 uppercase font-bold">PNR</span>
+                                <span class="font-mono font-bold text-af-blue">A1 234</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-gray-600 font-medium mr-2 text-sm">Classe :</span>
+                                <span class="bg-af-blue text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Business</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Passengers & Luggage -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="border rounded-xl p-5">
+                            <div class="flex items-center mb-4 text-af-blue font-bold">
+                                <i class="fa-solid fa-user-tag mr-2"></i> Passager(s)
+                            </div>
+                            <p class="font-bold text-gray-800">MARIA JOUNIER</p>
+                        </div>
+
+                        <div class="border rounded-xl p-5">
+                            <div class="flex items-center mb-4 text-af-blue font-bold">
+                                <i class="fa-solid fa-suitcase-rolling mr-2"></i> Informations bagages
+                            </div>
+                            <ul class="text-sm space-y-2 text-gray-700">
+                                <li><i class="fa-solid fa-check text-green-500 mr-2"></i> 1 accessoire + 1 bagage cabine (12kg total)</li>
+                                <li><i class="fa-solid fa-check text-green-500 mr-2"></i> 1 bagage en soute de 23kg inclus</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Payment Note -->
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+                        <div class="flex items-start">
+                            <i class="fa-solid fa-triangle-exclamation text-af-red mt-1 mr-3"></i>
+                            <div>
+                                <h6 class="text-af-red font-bold uppercase text-sm mb-2">Note importante</h6>
+                                <p class="text-gray-700 text-sm leading-relaxed">
+                                    La valeur totale de votre voyage s'élève à <span class="font-bold text-af-blue">800 EURO</span> y compris vos bagages.
+                                    Ce montant doit être réglé avant l'heure de départ.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer of Result -->
+                <div class="bg-gray-100 p-8 text-center border-t border-gray-200">
+                    <p class="text-gray-600 italic mb-4 text-sm">Nous vous remercions de votre confiance et vous souhaitons un excellent voyage.</p>
+                    <p class="text-af-blue font-bold">L'équipe Air France</p>
+                    <div class="mt-6 flex justify-center space-x-4">
+                        <button class="bg-white border border-gray-300 px-6 py-2 rounded font-semibold text-gray-700 hover:bg-gray-50">Imprimer</button>
+                        <button class="bg-af-blue text-white px-6 py-2 rounded font-semibold hover:bg-opacity-90">Télécharger PDF</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bouton Retour à l'accueil -->
+            <div class="text-center mt-8">
+                <button onclick="goHome()" class="text-af-blue font-bold hover:underline flex items-center justify-center mx-auto space-x-2">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Retourner à la page d'accueil</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Error Message (Hidden) -->
+        <div id="error-message" class="hidden-el max-w-2xl mx-auto p-4 bg-red-100 text-red-700 rounded-lg text-center mt-4">
+            <i class="fa-solid fa-circle-xmark mr-2"></i> Numéro de réservation invalide.
+        </div>
+
+    </main>
+
+    <!-- Footer Page -->
+    <footer class="bg-white border-t border-gray-200 py-10">
+        <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
+            <p>&copy; 2024 Air France - Tous droits réservés</p>
+            <div class="flex space-x-6 mt-4 md:mt-0">
+                <a href="#" class="hover:text-af-blue">Confidentialité</a>
+                <a href="#" class="hover:text-af-blue">Cookies</a>
+                <a href="#" class="hover:text-af-blue">Mentions légales</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function startSearch() {
+            const inputEl = document.getElementById('flight-number');
+            const inputVal = inputEl.value.trim().toUpperCase();
+            const searchCard = document.getElementById('search-card');
+            const loadingState = document.getElementById('loading-state');
+            const resultDetails = document.getElementById('result-details');
+            const errorMessage = document.getElementById('error-message');
+            const progressBar = document.getElementById('progress-bar');
+
+            // Masquer les résultats précédents ou erreurs
+            resultDetails.classList.add('hidden-el');
+            errorMessage.classList.add('hidden-el');
+
+            if (!inputVal) {
+                errorMessage.innerText = "Veuillez entrer un numéro de vol.";
+                errorMessage.classList.remove('hidden-el');
+                return;
+            }
+
+            // Masquer le formulaire de recherche et vider le champ
+            searchCard.classList.add('hidden-el');
+            loadingState.classList.remove('hidden-el');
+            inputEl.value = '';
+
+            // Simulation de barre de progression
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 2;
+                progressBar.style.width = progress + '%';
+                if (progress >= 100) clearInterval(interval);
+            }, 100);
+
+            // Attente de 5 secondes
+            setTimeout(() => {
+                loadingState.classList.add('hidden-el');
+                
+                // Vérification spécifique demandée
+                if (inputVal.includes('A1') && inputVal.includes('234')) {
+                    resultDetails.classList.remove('hidden-el');
+                } else {
+                    searchCard.classList.remove('hidden-el');
+                    errorMessage.classList.remove('hidden-el');
+                    errorMessage.innerHTML = `<i class="fa-solid fa-circle-xmark mr-2"></i> Le dossier n'a pas été trouvé. Veuillez vérifier vos informations de vol.`;
+                }
+            }, 5000);
+        }
+
+        function goHome() {
+            // Revenir à l'écran de recherche
+            document.getElementById('result-details').classList.add('hidden-el');
+            document.getElementById('search-card').classList.remove('hidden-el');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.getElementById('flight-number').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                startSearch();
+            }
+        });
+    </script>
+</body>
+</html>
